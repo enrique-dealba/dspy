@@ -2,21 +2,26 @@ import dspy
 
 port = 8888 # maybe not needed
 model = "mistralai/Mistral-7B-Instruct-v0.1"
-llm = dspy.HFClientTGI(model=model, port=port, max_tokens=250)
+llm = dspy.HFClientTGI(model=model, port=port, max_tokens=150)
 
 dspy.settings.configure(lm=llm)
 
-class RAG(dspy.Module):
-    def __init__(self, num_passages=3):
-        super().__init__()
-        self.retrieve = dspy.Retrieve(k=num_passages)
-        self.generate_answer = dspy.ChainOfThought("context, question -> answer")
+class BasicQA(dspy.Signature):
+    """Answer questions with short factoid answers."""
+
+    question = dspy.InputField()
+    answer = dspy.OutputField(desc="often between 1 and 5 words")
     
-    def forward(self, question):
-        context = self.retrieve(question).passages
-        answer = self.generate_answer(context=context, question=question)
-        return answer
-    
-rag = RAG()
-response = rag("what is the capital of France?").answer  # -> "Paris"
-print(f"LLM Response: {response}")
+# Define the predictor.
+generate_answer = dspy.Predict(BasicQA)
+
+# Call the predictor on a particular input.
+example_question = "At My Window was released by which American singer-songwriter?"
+example_answer = "John Townes Van Zandt"
+
+pred = generate_answer(question=example_question)
+
+# Print the input and the prediction.
+print(f"Question: {example_question}")
+print(f"Predicted Answer: {pred.answer}")
+print(f"Actual Answer: {example_answer}")
